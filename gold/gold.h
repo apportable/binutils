@@ -109,6 +109,20 @@ struct hash<off_t> : public std::unary_function<off_t, std::size_t>
 namespace __gnu_cxx
 {
 
+#ifdef __APPLE__
+inline size_t __stl_hash_string(const char* string) {
+  std::hash<std::string> hash_fn;
+  size_t val = 0;
+  
+  if (string != NULL) {
+      std::string str(string);
+      val = hash_fn(str);
+  }
+
+  return val;
+}
+#endif
+
 template<>
 struct hash<std::string>
 {
