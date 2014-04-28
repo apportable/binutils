@@ -2568,7 +2568,7 @@ yylex(YYSTYPE* lvalp, void* closurev)
       gold_unreachable();
 
     case Token::TOKEN_INVALID:
-      yyerror(closurev, "invalid character");
+      ::yyerror(closurev, "invalid character");
       return 0;
 
     case Token::TOKEN_EOF:
@@ -2752,7 +2752,7 @@ script_set_entry(void* closurev, const char* entry, size_t length)
   // TODO(csilvers): FIXME -- call set_entry directly.
   std::string arg("--entry=");
   arg.append(entry, length);
-  script_parse_option(closurev, arg.c_str(), arg.size());
+  ::script_parse_option(closurev, arg.c_str(), arg.size());
 }
 
 // Called by the bison parser to set whether to define common symbols.
@@ -2761,7 +2761,7 @@ extern "C" void
 script_set_common_allocation(void* closurev, int set)
 {
   const char* arg = set != 0 ? "--define-common" : "--no-define-common";
-  script_parse_option(closurev, arg, strlen(arg));
+  ::script_parse_option(closurev, arg, strlen(arg));
 }
 
 // Called by the bison parser to refer to a symbol.
@@ -2884,7 +2884,7 @@ script_add_search_dir(void* closurev, const char* option, size_t length)
   else if (!closure->command_line()->options().nostdlib())
     {
       std::string s = "-L" + std::string(option, length);
-      script_parse_option(closurev, s.c_str(), s.size());
+      ::script_parse_option(closurev, s.c_str(), s.size());
     }
 }
 
@@ -3024,7 +3024,7 @@ version_script_push_lang(void* closurev, const char* lang, int langlen)
       snprintf(buf, langlen + 100,
 	       _("unrecognized version script language '%s'"),
 	       language.c_str());
-      yyerror(closurev, buf);
+      ::yyerror(closurev, buf);
       delete[] buf;
       code = Version_script_info::LANGUAGE_C;
     }
@@ -3178,7 +3178,7 @@ script_string_sort_list_add(String_sort_list_ptr pv,
 			    const struct Wildcard_section* string_sort)
 {
   if (pv == NULL)
-    return script_new_string_sort_list(string_sort);
+    return ::script_new_string_sort_list(string_sort);
   else
     {
       pv->push_back(*string_sort);
@@ -3202,7 +3202,7 @@ extern "C" String_list_ptr
 script_string_list_push_back(String_list_ptr pv, const char* str, size_t len)
 {
   if (pv == NULL)
-    return script_new_string_list(str, len);
+    return ::script_new_string_list(str, len);
   else
     {
       pv->push_back(std::string(str, len));
@@ -3274,7 +3274,7 @@ script_phdr_string_to_type(void* closurev, const char* name, size_t namelen)
     if (namelen == phdr_type_names[i].namelen
 	&& strncmp(name, phdr_type_names[i].name, namelen) == 0)
       return phdr_type_names[i].val;
-  yyerror(closurev, _("unknown PHDR type (try integer)"));
+  ::yyerror(closurev, _("unknown PHDR type (try integer)"));
   return elfcpp::PT_NULL;
 }
 
@@ -3349,7 +3349,7 @@ script_parse_memory_attr(void* closurev, const char* attrs, size_t attrlen,
       case 'l':
 	attributes |= MEM_INITIALIZED; break;
       default:
-	yyerror(closurev, _("unknown MEMORY attribute"));
+	::yyerror(closurev, _("unknown MEMORY attribute"));
       }
 
   if (invert)
