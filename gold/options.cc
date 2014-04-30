@@ -1449,7 +1449,6 @@ Command_line::process_one_option(int argc, const char** argv, int i,
   return argc;
 }
 
-
 void
 Command_line::process(int argc, const char** argv)
 {
@@ -1466,15 +1465,48 @@ Command_line::process(int argc, const char** argv)
           this->inputs_.add_file(file);
           ++i;
         }
-      else
+      else {
+        bool process_file_list = false;
+        if (argv[i] != NULL && strcmp(argv[i], "-filelist") == 0) {
+            process_file_list = true;
+        }
         i = process_one_option(argc, argv, i, &no_more_options);
+        if (process_file_list) {
+            // it would be nice to make this cleaner, however these need to be positional...
+            // hence the hackyness.
+            if (this->options().filelist() != NULL) {
+                FILE *f = fopen(this->options().filelist(), "r");
+                    
+                if (f != NULL) {
+                    char path[PATH_MAX];
+                    while (fgets(path, PATH_MAX, f) != NULL) {
+                        size_t len = strlen(path);
+                        if (len <= 1) {
+                            continue;
+                        }
+                        if (path[len - 1] == '\n') {
+                            path[len - 1] = '\0';
+                        }
+                        Input_file_argument file(path,
+                           Input_file_argument::INPUT_FILE_TYPE_FILE,
+                           "", false, this->position_options_);
+                        this->inputs_.add_file(file);
+                        bzero(path, PATH_MAX);
+                    }
+                    fclose(f);
+                }
+            }
+        }
+      }
     }
-
+  
   if (this->inputs_.in_group())
     {
       fprintf(stderr, _("%s: missing group end\n"), program_name);
       usage();
     }
+
+    
 
   // Normalize the options and ensure they don't contradict each other.
   this->options_.finalize();

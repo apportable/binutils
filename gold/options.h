@@ -168,7 +168,7 @@ struct One_option
   Struct_var* reader;
 
   One_option(const char* ln, Dashes d, char sn, const char* dv,
-             const char* hs, const char* ha, bool oa, Struct_var* r)
+             const char* hs, const char* ha, bool oa, Struct_var* r, bool gnu_style=true)
     : longname(ln), dashes(d), shortname(sn), default_value(dv ? dv : ""),
       helpstring(hs), helparg(ha), optional_arg(oa), reader(r)
   {
@@ -176,9 +176,11 @@ struct One_option
     // style uses dashes in option names.  longname is likely to have
     // underscores in it because it's also used to declare a C++
     // function.
-    const char* pos = strchr(this->longname.c_str(), '_');
-    for (; pos; pos = strchr(pos, '_'))
-      this->longname[pos - this->longname.c_str()] = '-';
+    if (gnu_style) {
+      const char* pos = strchr(this->longname.c_str(), '_');
+      for (; pos; pos = strchr(pos, '_'))
+        this->longname[pos - this->longname.c_str()] = '-';
+    }
 
     // We only register ourselves if our helpstring is not NULL.  This
     // is to support the "no-VAR" boolean variables, which we
@@ -302,6 +304,49 @@ struct Struct_special : public Struct_var
   set_##varname__(param_type__ value)                                        \
   { this->varname__##_.value = value; }
 
+#define DEFINE_var_literal(varname__, longname__, dashes__, shortname__,     \
+                   default_value__, default_value_as_string__, helpstring__, \
+                   helparg__, optional_arg__, type__, param_type__,          \
+                   parse_fn__)                                               \
+ public:                                                                     \
+  param_type__                                                               \
+  (varname__)() const                                                        \
+  { return this->varname__##_.value; }                                       \
+                                                                             \
+  bool                                                                       \
+  user_set_##varname__() const                                               \
+  { return this->varname__##_.user_set_via_option; }                         \
+                                                                             \
+  void                       \
+  set_user_set_##varname__()                 \
+  { this->varname__##_.user_set_via_option = true; }           \
+                       \
+ private:                                                                    \
+  struct Struct_##varname__ : public options::Struct_var                     \
+  {                                                                          \
+    Struct_##varname__()                                                     \
+      : option(longname__, dashes__, shortname__, default_value_as_string__, \
+               helpstring__, helparg__, optional_arg__, this, false),        \
+        user_set_via_option(false), value(default_value__)                   \
+    { }                                                                      \
+                                                                             \
+    void                                                                     \
+    parse_to_value(const char* option_name, const char* arg,                 \
+                   Command_line*, General_options*)                          \
+    {                                                                        \
+      parse_fn__(option_name, arg, &this->value);                            \
+      this->user_set_via_option = true;                                      \
+    }                                                                        \
+                                                                             \
+    options::One_option option;                                              \
+    bool user_set_via_option;                                                \
+    type__ value;                                                            \
+  };                                                                         \
+  Struct_##varname__ varname__##_;                                           \
+  void                                                                       \
+  set_##varname__(param_type__ value)                                        \
+  { this->varname__##_.value = value; }
+
 // These macros allow for easy addition of a new commandline option.
 
 // If no_helpstring__ is not NULL, then in addition to creating
@@ -391,6 +436,13 @@ struct Struct_special : public Struct_var
   DEFINE_var(varname__, dashes__, shortname__, default_value__,          \
              default_value__, helpstring__, helparg__, false,		 \
              const char*, const char*, options::parse_string)
+
+#define DEFINE_string_literal(varname__, longname__, dashes__,           \
+                      shortname__, default_value__, helpstring__,        \
+                      helparg__)                                         \
+  DEFINE_var_literal(varname__, longname__, dashes__, shortname__,       \
+             default_value__, default_value__, helpstring__, helparg__,  \
+             false, const char*, const char*, options::parse_string)
 
 // This is like DEFINE_string, but we convert each occurrence to a
 // Search_directory and store it in a vector.  Thus we also have the
@@ -801,6 +853,13 @@ class General_options
   DEFINE_bool(gnu_unique, options::TWO_DASHES, '\0', true,
 	      N_("Enable STB_GNU_UNIQUE symbol binding (default)"),
 	      N_("Disable STB_GNU_UNIQUE symbol binding"));
+
+  DEFINE_string(filelist, options::EXACTLY_ONE_DASH, '\0', NULL,
+                N_("List of files to link"), N_("FILENAME"));
+  
+  DEFINE_string_literal(dependency_info, "dependency_info", 
+                options::EXACTLY_ONE_DASH, '\0', NULL,
+                N_("Emit dependency info. (currently disabled)"), N_("FILENAME"));
 
   DEFINE_string(soname, options::ONE_DASH, 'h', NULL,
                 N_("Set shared library name"), N_("FILENAME"));
